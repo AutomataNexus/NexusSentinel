@@ -260,10 +260,7 @@ fn fill_critical(rng: &mut Rng, f: &mut [f32]) {
 
 /// Generate a batch of samples.
 /// Returns (features [batch*48], health_labels [batch], severity_classes [batch]).
-pub fn generate_batch(
-    rng: &mut Rng,
-    batch_size: usize,
-) -> (Vec<f32>, Vec<f32>, Vec<usize>) {
+pub fn generate_batch(rng: &mut Rng, batch_size: usize) -> (Vec<f32>, Vec<f32>, Vec<usize>) {
     let mut all_features = Vec::with_capacity(batch_size * NUM_FEATURES);
     let mut all_labels = Vec::with_capacity(batch_size);
     let mut all_severity = Vec::with_capacity(batch_size);

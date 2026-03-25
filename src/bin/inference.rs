@@ -14,8 +14,8 @@ use axonml_nn::Module;
 use axonml_serialize::load_state_dict;
 use axonml_tensor::Tensor;
 
-use nexus_sentinel::config::NUM_FEATURES;
 use nexus_sentinel::Sentinel;
+use nexus_sentinel::config::NUM_FEATURES;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -44,7 +44,10 @@ fn main() {
         }
         eprintln!("Loaded {}/{} parameters", loaded, model_params.len());
     } else {
-        eprintln!("WARNING: No model at {}, using random weights", model_path.display());
+        eprintln!(
+            "WARNING: No model at {}, using random weights",
+            model_path.display()
+        );
     }
 
     // Read features from --input file or stdin
@@ -52,7 +55,9 @@ fn main() {
         std::fs::read_to_string(&args[pos + 1]).expect("Failed to read input file")
     } else {
         let mut buf = String::new();
-        std::io::stdin().read_to_string(&mut buf).expect("Failed to read stdin");
+        std::io::stdin()
+            .read_to_string(&mut buf)
+            .expect("Failed to read stdin");
         buf
     };
 

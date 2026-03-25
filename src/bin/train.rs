@@ -16,17 +16,17 @@ use std::time::Instant;
 use axonml_autograd::Variable;
 use axonml_nn::{CrossEntropyLoss, Module};
 use axonml_optim::{
-    lr_scheduler::{CosineAnnealingLR, LRScheduler},
     Adam, Optimizer,
+    lr_scheduler::{CosineAnnealingLR, LRScheduler},
 };
 use axonml_serialize::{
-    load_checkpoint, save_checkpoint, save_model, Checkpoint, StateDict, TrainingState,
+    Checkpoint, StateDict, TrainingState, load_checkpoint, save_checkpoint, save_model,
 };
 use axonml_tensor::Tensor;
 
-use nexus_sentinel::config::{NUM_FEATURES, NUM_SEVERITY};
-use nexus_sentinel::datagen::{generate_batch, Rng};
 use nexus_sentinel::Sentinel;
+use nexus_sentinel::config::{NUM_FEATURES, NUM_SEVERITY};
+use nexus_sentinel::datagen::{Rng, generate_batch};
 
 fn main() {
     println!("═══════════════════════════════════════════════════════════");
@@ -89,18 +89,30 @@ fn main() {
                 best_loss = bl;
             }
             training_state = checkpoint.training_state;
-            println!("  Resumed from epoch {} ({}/{} params, best: {:.6})",
-                start_epoch, loaded, model_params.len(), best_loss);
+            println!(
+                "  Resumed from epoch {} ({}/{} params, best: {:.6})",
+                start_epoch,
+                loaded,
+                model_params.len(),
+                best_loss
+            );
         }
     }
 
     let mut rng = Rng::new(42 + start_epoch as u64 * 1000);
 
     println!();
-    println!("  Epochs: {}-{}, Batch: {}, Batches/epoch: {}",
-        start_epoch + 1, num_epochs, batch_size, batches_per_epoch);
-    println!("  Weights: recon={}, health={}, severity={}",
-        recon_weight, health_weight, severity_weight);
+    println!(
+        "  Epochs: {}-{}, Batch: {}, Batches/epoch: {}",
+        start_epoch + 1,
+        num_epochs,
+        batch_size,
+        batches_per_epoch
+    );
+    println!(
+        "  Weights: recon={}, health={}, severity={}",
+        recon_weight, health_weight, severity_weight
+    );
     println!("  LR: {} → CosineAnnealing", learning_rate);
     println!();
 
@@ -130,16 +142,12 @@ fn main() {
             );
             // Severity labels as class indices
             let sev_labels = Variable::new(
-                Tensor::from_vec(
-                    sev_data.iter().map(|&s| s as f32).collect(),
-                    &[batch_size],
-                )
-                .unwrap(),
+                Tensor::from_vec(sev_data.iter().map(|&s| s as f32).collect(), &[batch_size])
+                    .unwrap(),
                 false,
             );
 
-            let (_latent, reconstructed, health_score, severity_logits) =
-                model.forward_all(&input);
+            let (_latent, reconstructed, health_score, severity_logits) = model.forward_all(&input);
 
             // Reconstruction MSE
             let recon_diff = reconstructed.sub_var(&target);
@@ -229,7 +237,14 @@ fn main() {
         if (epoch + 1) % 10 == 0 || epoch == start_epoch || epoch == num_epochs - 1 {
             println!(
                 "Epoch {:3}/{} | total: {:.6} | recon: {:.6} | health: {:.6} | sev: {:.6} | lr: {:.8}{}",
-                epoch + 1, num_epochs, avg_total, avg_recon, avg_health, avg_severity, lr, improved
+                epoch + 1,
+                num_epochs,
+                avg_total,
+                avg_recon,
+                avg_health,
+                avg_severity,
+                lr,
+                improved
             );
         }
 
@@ -241,7 +256,7 @@ fn main() {
     println!("--- Validation ---");
     model.set_training(false);
 
-    use nexus_sentinel::datagen::{generate_sample, Condition};
+    use nexus_sentinel::datagen::{Condition, generate_sample};
     for (name, condition) in [
         ("Normal", Condition::Normal),
         ("Watch", Condition::Watch),
@@ -256,14 +271,21 @@ fn main() {
         let (score, sev_class, mse) = model.assess(&input);
         println!(
             "  {:10} | health: {:.4} (exp: {:.2}) | severity: {} (exp: {}) | recon_mse: {:.6}",
-            name, score, expected, Sentinel::severity_name(sev_class),
-            Sentinel::severity_name(expected_sev), mse
+            name,
+            score,
+            expected,
+            Sentinel::severity_name(sev_class),
+            Sentinel::severity_name(expected_sev),
+            mse
         );
     }
 
     // Save final model + export
-    save_model(&model, PathBuf::from("/opt/NexusSentinel/models/sentinel.axonml"))
-        .expect("Failed to save model");
+    save_model(
+        &model,
+        PathBuf::from("/opt/NexusSentinel/models/sentinel.axonml"),
+    )
+    .expect("Failed to save model");
 
     monitor.set_status("complete");
 

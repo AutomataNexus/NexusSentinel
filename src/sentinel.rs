@@ -77,10 +77,7 @@ impl Sentinel {
     }
 
     /// Full forward pass returning (latent, reconstruction, health_score, severity_logits).
-    pub fn forward_all(
-        &self,
-        input: &Variable,
-    ) -> (Variable, Variable, Variable, Variable) {
+    pub fn forward_all(&self, input: &Variable) -> (Variable, Variable, Variable, Variable) {
         // Encode with residual connection
         let h = self.enc1.forward(input).relu();
         let h = self.enc2.forward(&h).relu();
@@ -270,7 +267,11 @@ mod tests {
         let model = Sentinel::new();
         let total: usize = model.parameters().iter().map(|p| p.numel()).sum();
         println!("NexusSentinel parameters: {}", total);
-        assert!(total > 10_000 && total < 30_000, "Sentinel has {} params", total);
+        assert!(
+            total > 10_000 && total < 30_000,
+            "Sentinel has {} params",
+            total
+        );
     }
 
     #[test]

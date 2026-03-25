@@ -3,9 +3,7 @@
 //! Usage: cargo run --release --bin export-weights
 
 use axonml_serialize::load_state_dict;
-use nexus_sentinel::config::{
-    HEALTH_HIDDEN, HIDDEN_DIM, LATENT_DIM, NUM_FEATURES, NUM_SEVERITY,
-};
+use nexus_sentinel::config::{HEALTH_HIDDEN, HIDDEN_DIM, LATENT_DIM, NUM_FEATURES, NUM_SEVERITY};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -99,5 +97,8 @@ fn main() {
     let json = serde_json::to_string(&weights).expect("Serialization failed");
     std::fs::write(output_path, &json).expect("Write failed");
 
-    println!("\nExported: {output_path} ({:.1} KB)", json.len() as f64 / 1024.0);
+    println!(
+        "\nExported: {output_path} ({:.1} KB)",
+        json.len() as f64 / 1024.0
+    );
 }
