@@ -1,0 +1,88 @@
+name: SLSA Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions: read-all
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      hashes: ${{ steps.hash.outputs.hashes }}
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build release binaries
+        run: |
+          cargo build --release --bin train
+          cargo build --release --bin inference
+          cargo build --release --bin export-weights
+
+      - name: Prepare artifacts
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p artifacts
+          cp target/release/train "artifacts/nexus-sentinel-train-${VERSION}-linux-amd64"
+          cp target/release/inference "artifacts/nexus-sentinel-inference-${VERSION}-linux-amd64"
+          cp target/release/export-weights "artifacts/nexus-sentinel-export-${VERSION}-linux-amd64"
+          cp models/sentinel.axonml "artifacts/sentinel-${VERSION}.axonml"
+          cp models/sentinel_weights.json "artifacts/sentinel-${VERSION}-weights.json"
+          tar -czf "artifacts/nexus-sentinel-${VERSION}-linux-amd64.tar.gz" \
+            -C target/release train inference export-weights
+          tar -czf "artifacts/nexus-sentinel-${VERSION}-models.tar.gz" \
+            -C models sentinel.axonml sentinel_weights.json
+
+      - name: Generate subject hashes
+        id: hash
+        run: |
+          cd artifacts
+          HASHES=$(sha256sum * | base64 -w0)
+          echo "hashes=$HASHES" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 5
+
+  provenance:
+    needs: [build]
+    permissions:
+      actions: read
+      id-token: write
+      contents: write
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
+    with:
+      base64-subjects: "${{ needs.build.outputs.hashes }}"
+      upload-assets: true
+
+  release:
+    needs: [build, provenance]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: artifacts
+          path: artifacts/
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
